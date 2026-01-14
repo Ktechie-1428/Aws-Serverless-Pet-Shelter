@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  pets_backend
+  SAM Template for pets_backend
+
+Resources:
+  PetsAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'GET,OPTIONS,HEAD'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+  GetPetsLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Environment:
+        Variables:
+          PETS_TABLE: !Ref PetsTable
+      CodeUri: handlers/get_pets
+      Handler: getPets.lambda_handler
+      Runtime: python3.12
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName: !Ref PetsTable
+      Architectures: # Specifies the architecture for the Lambda function.
+        - x86_64
+      Events: # Defines events that trigger the Lambda function.
+        GetPetsApi: # Specifies an API Gateway event named GetPetsApi that triggers the Lambda function.
+          Type: Api # Specifies that the event source is an API Gateway endpoint.
+          Properties: # Defines properties of the API Gateway event.
+            RestApiId: !Ref PetsAPI
+            Path: /pets
+            Method: get
+
+  #Write a Lambda function called "GetAdoptionsLambda" that uses the Python 3.12 runtime, and is invoked at the path /adoptions with a get method.
+  GetAdoptionsLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handlers/get_adoptions
+      Handler: getAdoptions.lambda_handler
+      Runtime: python3.12
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName: !Ref PetsTable
+      Architectures: # Specifies the architecture for the Lambda function.
+        - x86_64
+      Events: # Defines events that trigger the Lambda function.
+        GetAdoptionsApi: # Specifies an API Gateway event named GetAdoptionsApi that triggers the Lambda function.
+          Type: Api # Specifies that the event source is an API Gateway endpoint.
+          Properties: # Defines properties of the API Gateway event.
+            RestApiId: !Ref PetsAPI
+            Path: /adoptions
+            Method: get
+      
+  PetsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PetsTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+Outputs:
+  PetsAPI:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${PetsAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+  GetPetsAPIEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage for Pets"
+    Value: !Sub "https://${PetsAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/pets/"
+#add adoptions endpoint
+  GetAdoptionsAPIEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage for Adoptions"
+    Value: !Sub "https://${PetsAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/adoptions/"
